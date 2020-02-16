@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TextInput, Text, View, Button, Dimensions, AsyncStorage, Keyboard } from 'react-native';
+import { StyleSheet, Modal, ActivityIndicator, TextInput, Text, View, Button, Dimensions, AsyncStorage, Keyboard } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { FlatList } from 'react-native-gesture-handler';
@@ -9,6 +9,7 @@ const Stack = createStackNavigator();
 const HomeScreen = () => {
   const [todoList, setTodoList] = useState([]);
   const [todoItem, setTodoItem] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const textInputHandler = (text) => {
     setTodoItem(text);
@@ -16,22 +17,26 @@ const HomeScreen = () => {
 
   _retrieveStorage = async () => {
     try {
+      setIsLoading(true);
       const todoListString = await AsyncStorage.getItem("TodoList");
       if (!todoListString) {
+        setIsLoading(false);
         return;
       }
       const todoList = JSON.parse(todoListString);
       if (todoList.length === 0) {
+        setIsLoading(false);
         return;
       }
-      console.log(todoList);
       setTodoList(todoList);
+      setIsLoading(false);
     } catch (error) {
+      setIsLoading(false);
       console.log(error);
     }
   }
 
-  const saveTodoItem = async () => {
+  const saveTodoItem = () => {
     setTodoList((oldList) => {
       const newList = [...oldList];
       const newTodo = {
@@ -43,14 +48,12 @@ const HomeScreen = () => {
     });
     Keyboard.dismiss();
     setTodoItem(null);
-    await AsyncStorage.setItem('TodoList', JSON.stringify(todoList))
   }
 
-  const deleteItemHandler = async (itemId) => {
+  const deleteItemHandler = (itemId) => {
     setTodoList((oldList) => {
       return oldList.filter((item) => item.id !== itemId);
     });
-    await AsyncStorage.setItem('TodoList', JSON.stringify(todoList))
   }
 
   useEffect(() => {
@@ -78,6 +81,17 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
+      {
+        isLoading &&
+        <Modal
+          style={styles.modal}
+          animationType="fade"
+          transparent={false}
+          visible={isLoading}
+        >
+          <ActivityIndicator size="large" color="#0000ff"/>
+        </Modal>
+      }
       <View style={styles.inputArea}>
         <TextInput
           style={styles.textInput}
@@ -139,14 +153,15 @@ export default function App() {
 }
 
 
-const windowWidth = Dimensions.get('window').width;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignContent: "center",
     marginLeft: 10,
     marginRight: 10,
+  },
+  modal: {
+    justifyContent: 'center'
   },
   textInput: {
     height: 40
